@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">PlayServicesSample</string>
+    <string name="action_settings">Settings</string>
+    <string name="hello_world">Hello world!</string>
+
+    <string name="stop_location_polling">Stop Location polling</string>
+    <string name="start_location_polling">Start Location polling</string>
+
+    <string name="stop_activity_polling">Stop Activity polling</string>
+    <string name="start_activity_polling">Start Activity polling</string>
+    
+    
+</resources>
