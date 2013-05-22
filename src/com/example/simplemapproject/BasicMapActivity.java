@@ -1,19 +1,20 @@
 package com.example.simplemapproject;
 
-import java.io.File;
-import java.io.FileOutputStream;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 import android.app.PendingIntent;
-import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.location.Location;
 import android.os.Bundle;
-import android.os.Environment;
 import android.support.v4.app.FragmentActivity;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
 
+import com.example.simplemapproject.utl.Utils;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesClient;
 import com.google.android.gms.common.GooglePlayServicesClient.OnConnectionFailedListener;
@@ -24,7 +25,9 @@ import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.GoogleMap.OnInfoWindowClickListener;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 public class BasicMapActivity extends FragmentActivity implements OnConnectionFailedListener {
@@ -49,12 +52,23 @@ public class BasicMapActivity extends FragmentActivity implements OnConnectionFa
 
 	private boolean activityPollingInProgress;
 	
+	private List<Marker> markers = new ArrayList<Marker>();
+	
+	private ManualLocationResponseReceiver receiver;
+	
 	@Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.basic_demo);
         
         System.out.println("onCreate called");
+        
+        
+        
+        IntentFilter filter = new IntentFilter(Constants.INTENT_ACTION_LOCATION_UPDATED);
+        filter.addCategory(Intent.CATEGORY_DEFAULT);
+        receiver = new ManualLocationResponseReceiver();
+        registerReceiver(receiver, filter);
         
         this.activityPollingInProgress=false;
         
@@ -157,6 +171,12 @@ public class BasicMapActivity extends FragmentActivity implements OnConnectionFa
 
 
     }
+	
+	@Override
+	protected void onStop() {
+		unregisterReceiver(receiver);
+		super.onStop();
+	}
 
     @Override
     protected void onResume() {
@@ -199,12 +219,69 @@ public class BasicMapActivity extends FragmentActivity implements OnConnectionFa
      * This should only be called once and when we are sure that {@link #mMap} is not null.
      */
     private void setUpMap() {
-        mMap.addMarker(new MarkerOptions().position(new LatLng(0, 0)).title("Marker"));
+        mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
+			
+			@Override
+			public void onMapClick(LatLng latLng) {
+				System.out.println("Clicked on map with LatLng : " + latLng);
+				
+				String snippet = "Seen you here at " + Utils.parseDate(System.currentTimeMillis(), BasicMapActivity.this);
+				String title = "Manual loc";
+				Marker marker = mMap.addMarker(new MarkerOptions().position(latLng)
+																	 .title(title)
+																	 .snippet(snippet));
+				
+				
+				
+				markers.add(marker);
+    			Intent intent = new Intent();
+    			//intent.setAction(Constants.INTENT_ACTION_MANUAL_LOCATION_UPDATED);
+    			intent.setAction(Constants.INTENT_ACTION_LOCATION_UPDATED);
+    			intent.addCategory(Intent.CATEGORY_DEFAULT);
+    			intent.putExtra(Constants.INTENT_EXTRA_LOCATION, Utils.convertLatLngToLocation(latLng));
+    			sendBroadcast(intent);
+    			
+			}
+		});
+        
+        mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
+			
+			@Override
+			public boolean onMarkerClick(Marker marker) {
+				System.out.println("Clicked on marker " + marker);
+				int indexOf = markers.indexOf(marker);
+				Marker markerFromList = markers.get(indexOf);
+				//markerFromList.remove();
+				return false;
+			}
+		});
+        
+        mMap.setOnInfoWindowClickListener(new GoogleMap.OnInfoWindowClickListener() {
+			
+			@Override
+			public void onInfoWindowClick(Marker marker) {
+				System.out.println("Clicked on infoWindow" + marker);
+				int indexOf = markers.indexOf(marker);
+				Marker markerFromList = markers.get(indexOf);
+				System.out.println(markerFromList);
+				marker.remove();
+			}
+		});
     }
     
     
     private void retrieveLocationUsingPendingIntent() {
     	locationClient.connect();
+    }
+    
+    private void selectFirstMarker() {
+    	
+    	Marker marker = this.markers.get(0);
+
+    	if(marker != null)
+    	{
+    	    marker.showInfoWindow();
+    	}
     }
 
     
@@ -230,28 +307,6 @@ public class BasicMapActivity extends FragmentActivity implements OnConnectionFa
 		
 
 	};
-	
-	
-	private void writeToFile(String txt) {
-		try {
-		    FileOutputStream fos = openFileOutput("locations.txt",
-		            Context.MODE_APPEND | Context.MODE_WORLD_READABLE);
-		    fos.write(txt.toString().getBytes());
-		    fos.close();
-		 
-		    String storageState = Environment.getExternalStorageState();
-		    
-		    if (storageState.equals(Environment.MEDIA_MOUNTED)) {
-		        File file = new File(getExternalFilesDir(null),
-		                "locations.txt");
-		        FileOutputStream fos2 = new FileOutputStream(file);
-		        fos2.write(txt.toString().getBytes());
-		        fos2.close();
-		    }
-		} catch (Exception e) {
-		    e.printStackTrace();
-		}
-	}
 
 	@Override
 	public void onConnectionFailed(ConnectionResult result) {
