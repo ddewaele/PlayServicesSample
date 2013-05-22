@@ -11,5 +11,8 @@
     <string name="stop_activity_polling">Stop Activity polling</string>
     <string name="start_activity_polling">Start Activity polling</string>
     
+    <string name="clear_all_markers">Clear all</string>
+    <string name="select_last_marker">Select Last Marker</string>
+    
     
 </resources>

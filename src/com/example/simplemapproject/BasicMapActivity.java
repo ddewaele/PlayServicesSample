@@ -1,10 +1,11 @@
 package com.example.simplemapproject;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
 import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.location.Location;
@@ -23,9 +24,12 @@ import com.google.android.gms.location.ActivityRecognitionClient;
 import com.google.android.gms.location.LocationClient;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.maps.CameraUpdate;
+import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.GoogleMap.CancelableCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.GoogleMap.OnInfoWindowClickListener;
+import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
@@ -40,7 +44,7 @@ public class BasicMapActivity extends FragmentActivity implements OnConnectionFa
 
 	private String requestType;
 	
-    private GoogleMap mMap;
+    private GoogleMap googleMap;
 	private LocationClient locationClient;
 	private ActivityRecognitionClient activityRecognitionClient; 
 	
@@ -49,12 +53,35 @@ public class BasicMapActivity extends FragmentActivity implements OnConnectionFa
 
 	private Button stopActivityPolling;
 	private Button startActivityPolling;
+	
+	private Button clearAllMarkers;
+	private Button selectLastMarker;
 
 	private boolean activityPollingInProgress;
 	
 	private List<Marker> markers = new ArrayList<Marker>();
 	
-	private ManualLocationResponseReceiver receiver;
+	private ManualLocationResponseReceiver receiver; 
+	
+	private BroadcastReceiver updateMapReceiver = new BroadcastReceiver() {
+		
+		@Override
+		public void onReceive(Context context, Intent intent) {
+			
+			if (Constants.INTENT_ACTION_LOCATION_UPDATE_MAP.equals(intent.getAction())) {
+				LatLng latLng = (LatLng) intent.getExtras().get(Constants.INTENT_EXTRA_LOCATION);
+				System.out.println("Adding LatLng " + latLng + " to map");
+				//clearAllMarkers();
+				addMarkerToMap(latLng);
+				
+			} else {
+				System.out.println("Unknown action received " + intent.getAction());
+			}
+		}
+	};
+
+	
+
 	
 	@Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,11 +91,6 @@ public class BasicMapActivity extends FragmentActivity implements OnConnectionFa
         System.out.println("onCreate called");
         
         
-        
-        IntentFilter filter = new IntentFilter(Constants.INTENT_ACTION_LOCATION_UPDATED);
-        filter.addCategory(Intent.CATEGORY_DEFAULT);
-        receiver = new ManualLocationResponseReceiver();
-        registerReceiver(receiver, filter);
         
         this.activityPollingInProgress=false;
         
@@ -164,6 +186,26 @@ public class BasicMapActivity extends FragmentActivity implements OnConnectionFa
 			}
 		});
         
+        clearAllMarkers = (Button) findViewById(R.id.clearAllMarkers);
+        clearAllMarkers.setOnClickListener(new OnClickListener() {
+			
+			@Override
+			public void onClick(View v) {
+				System.out.println("clearAllMarkers");
+				clearAllMarkers();
+			}
+		});
+        
+        selectLastMarker = (Button) findViewById(R.id.selectLastMarker);
+        selectLastMarker.setOnClickListener(new OnClickListener() {
+			
+			@Override
+			public void onClick(View v) {
+				System.out.println("selectLastMarker");
+				selectLastMarker();
+			}
+		});        
+        
         setUpMapIfNeeded();
         
         //locationClient.connect();
@@ -171,23 +213,39 @@ public class BasicMapActivity extends FragmentActivity implements OnConnectionFa
 
 
     }
+
+	private void registerUpdateMapReceiver() {
+		IntentFilter filter = new IntentFilter(Constants.INTENT_ACTION_LOCATION_UPDATE_MAP);
+        filter.addCategory(Intent.CATEGORY_DEFAULT);
+        registerReceiver(updateMapReceiver, filter);		
+	}
+
+	private void registerManualLocationReceiver() {
+		IntentFilter filter = new IntentFilter(Constants.INTENT_ACTION_MANUAL_LOCATION_UPDATED);
+        filter.addCategory(Intent.CATEGORY_DEFAULT);
+        receiver = new ManualLocationResponseReceiver();
+        registerReceiver(receiver, filter);
+	}
 	
 	@Override
-	protected void onStop() {
+	protected void onPause() {
 		unregisterReceiver(receiver);
-		super.onStop();
-	}
+		unregisterReceiver(updateMapReceiver);
+		super.onPause();
+	};
 
     @Override
     protected void onResume() {
-        super.onResume();
         setUpMapIfNeeded();
+        registerManualLocationReceiver();
+        registerUpdateMapReceiver();
+        super.onResume();
     }
 
     /**
      * Sets up the map if it is possible to do so (i.e., the Google Play services APK is correctly
      * installed) and the map has not already been instantiated.. This will ensure that we only ever
-     * call {@link #setUpMap()} once when {@link #mMap} is not null.
+     * call {@link #setUpMap()} once when {@link #googleMap} is not null.
      * <p>
      * If it isn't installed {@link SupportMapFragment} (and
      * {@link com.google.android.gms.maps.MapView MapView}) will show a prompt for the user to
@@ -201,12 +259,12 @@ public class BasicMapActivity extends FragmentActivity implements OnConnectionFa
      */
     private void setUpMapIfNeeded() {
         // Do a null check to confirm that we have not already instantiated the map.
-        if (mMap == null) {
+        if (googleMap == null) {
             // Try to obtain the map from the SupportMapFragment.
-            mMap = ((SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map))
+            googleMap = ((SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map))
                     .getMap();
             // Check if we were successful in obtaining the map.
-            if (mMap != null) {
+            if (googleMap != null) {
                 setUpMap();
             }
         }
@@ -216,35 +274,28 @@ public class BasicMapActivity extends FragmentActivity implements OnConnectionFa
      * This is where we can add markers or lines, add listeners or move the camera. In this case, we
      * just add a marker near Africa.
      * <p>
-     * This should only be called once and when we are sure that {@link #mMap} is not null.
+     * This should only be called once and when we are sure that {@link #googleMap} is not null.
      */
     private void setUpMap() {
-        mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
+        googleMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
 			
 			@Override
 			public void onMapClick(LatLng latLng) {
 				System.out.println("Clicked on map with LatLng : " + latLng);
 				
-				String snippet = "Seen you here at " + Utils.parseDate(System.currentTimeMillis(), BasicMapActivity.this);
-				String title = "Manual loc";
-				Marker marker = mMap.addMarker(new MarkerOptions().position(latLng)
-																	 .title(title)
-																	 .snippet(snippet));
+				addMarkerToMap(latLng);
 				
-				
-				
-				markers.add(marker);
     			Intent intent = new Intent();
-    			//intent.setAction(Constants.INTENT_ACTION_MANUAL_LOCATION_UPDATED);
-    			intent.setAction(Constants.INTENT_ACTION_LOCATION_UPDATED);
+    			intent.setAction(Constants.INTENT_ACTION_MANUAL_LOCATION_UPDATED);
     			intent.addCategory(Intent.CATEGORY_DEFAULT);
     			intent.putExtra(Constants.INTENT_EXTRA_LOCATION, Utils.convertLatLngToLocation(latLng));
     			sendBroadcast(intent);
     			
 			}
+
 		});
         
-        mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
+        googleMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
 			
 			@Override
 			public boolean onMarkerClick(Marker marker) {
@@ -256,7 +307,7 @@ public class BasicMapActivity extends FragmentActivity implements OnConnectionFa
 			}
 		});
         
-        mMap.setOnInfoWindowClickListener(new GoogleMap.OnInfoWindowClickListener() {
+        googleMap.setOnInfoWindowClickListener(new GoogleMap.OnInfoWindowClickListener() {
 			
 			@Override
 			public void onInfoWindowClick(Marker marker) {
@@ -270,6 +321,44 @@ public class BasicMapActivity extends FragmentActivity implements OnConnectionFa
     }
     
     
+    private void clearAllMarkers() {
+    	googleMap.clear();
+    	markers.clear();
+    	
+    }
+	private void addMarkerToMap(LatLng latLng) {
+		String snippet = "Seen you here at " + Utils.parseDate(System.currentTimeMillis(), BasicMapActivity.this);
+		String title = "Manual loc";
+		Marker marker = googleMap.addMarker(new MarkerOptions().position(latLng)
+															 .title(title)
+															 .snippet(snippet));
+		
+		markers.add(marker);
+		navigateToPoint(latLng);
+	}
+	
+    private void changeCamera(CameraUpdate update, CancelableCallback callback) {
+       	googleMap.animateCamera(update, callback);
+    }
+
+    private void changeCamera(CameraUpdate update) {
+        changeCamera(update, null);
+    }
+
+    
+    private void navigateToPoint(LatLng latLng) {
+    	CameraPosition position =
+                new CameraPosition.Builder().target(latLng)
+                        .zoom(15.5f)
+                        .bearing(0)
+                        .tilt(25)
+                        .build();
+    	
+    	changeCamera(CameraUpdateFactory.newCameraPosition(position)); 
+    }
+	
+
+	
     private void retrieveLocationUsingPendingIntent() {
     	locationClient.connect();
     }
@@ -284,6 +373,16 @@ public class BasicMapActivity extends FragmentActivity implements OnConnectionFa
     	}
     }
 
+
+    private void selectLastMarker() {
+    	
+    	Marker marker = this.markers.get(this.markers.size()-1);
+
+    	if(marker != null)
+    	{
+    	    marker.showInfoWindow();
+    	}
+    }
     
     private void retrieveLocationUsingListener() {
     	locationClient.connect();

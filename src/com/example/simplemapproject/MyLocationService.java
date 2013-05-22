@@ -6,6 +6,13 @@ import android.location.Location;
 
 import com.example.simplemapproject.utl.Utils;
 
+/**
+ * 
+ * IntentService responsible for capturing the incoming locations from the LocationManager.
+ * 
+ * @author Davy
+ *
+ */
 public class MyLocationService extends IntentService {
 
 	public MyLocationService() {
@@ -19,6 +26,13 @@ public class MyLocationService extends IntentService {
 			Location location = (Location) intent.getExtras().get(Constants.INTENT_EXTRA_LOCATION);
 			System.out.println("Found location = " + location);
 			Utils.writeSerializedLocationToDisk(location, getApplicationContext());
+
+			
+			Intent uiIntent = new Intent();
+			uiIntent.setAction(Constants.INTENT_ACTION_LOCATION_UPDATE_MAP);
+			uiIntent.addCategory(Intent.CATEGORY_DEFAULT);
+			uiIntent.putExtra(Constants.INTENT_EXTRA_LOCATION, Utils.convertLocationToLatLng(location));
+			sendBroadcast(uiIntent);			
 		}
 	}
 

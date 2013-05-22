@@ -25,6 +25,14 @@ public final class Utils {
 		
 	}
 	
+	public static final LatLng convertLocationToLatLng(Location location) {
+
+		return new LatLng(location.getLatitude(), location.getLongitude());
+		
+	}
+	
+	
+	
 	
 	public static final String parseDate(long time,Context ctx) {
 		DateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss",Locale.getDefault());
@@ -84,5 +92,9 @@ public final class Utils {
 		sb.append(location.getProvider());
 		sb.append("\n");
 		return sb.toString();
+	}
+
+	public static String parseDate(Context context) {
+		return parseDate(System.currentTimeMillis(),context);
 	}
 }
