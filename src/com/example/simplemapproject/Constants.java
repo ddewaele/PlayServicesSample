@@ -8,6 +8,7 @@ public class Constants {
 	public static final String INTENT_ACTION_MANUAL_LOCATION_UPDATED = "manual.location.updated.action";
 	public static final String INTENT_ACTION_RECOGNITION_CHANGE = "recognition.updated.action";
 	public static final String INTENT_EXTRA_LOCATION = "com.google.android.location.LOCATION";
+	public static final String INTENT_EXTRA_LATLNG = "com.google.android.location.LATLNG";;
 	
 	public static final String FILENAME_LOCATION = "location_dump.txt";
 	public static final String ACTIVITY_LOCATION = "activity_dump.txt";

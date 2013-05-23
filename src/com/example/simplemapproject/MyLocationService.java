@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.location.Location;
 
 import com.example.simplemapproject.utl.Utils;
+import com.google.android.gms.maps.model.LatLng;
 
 /**
  * 
@@ -31,7 +32,11 @@ public class MyLocationService extends IntentService {
 			Intent uiIntent = new Intent();
 			uiIntent.setAction(Constants.INTENT_ACTION_LOCATION_UPDATE_MAP);
 			uiIntent.addCategory(Intent.CATEGORY_DEFAULT);
-			uiIntent.putExtra(Constants.INTENT_EXTRA_LOCATION, Utils.convertLocationToLatLng(location));
+			
+			LatLng latLng = Utils.convertLocationToLatLng(location);
+			
+			uiIntent.putExtra(Constants.INTENT_EXTRA_LATLNG, latLng);
+			uiIntent.putExtra(Constants.INTENT_EXTRA_LOCATION, location);
 			sendBroadcast(uiIntent);			
 		}
 	}

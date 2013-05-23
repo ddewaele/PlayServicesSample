@@ -63,21 +63,34 @@ public class BasicMapActivity extends FragmentActivity implements OnConnectionFa
 	
 	private ManualLocationResponseReceiver receiver; 
 	
+	
+	/**
+	 * 
+	 * This is the receiver that will update the map.
+	 * It receives via the intent
+	 * 		1. The LatLng object
+	 * 		2. A timestamp when the location was recorded.
+	 * 
+	 * 
+	 */
 	private BroadcastReceiver updateMapReceiver = new BroadcastReceiver() {
 		
 		@Override
 		public void onReceive(Context context, Intent intent) {
 			
 			if (Constants.INTENT_ACTION_LOCATION_UPDATE_MAP.equals(intent.getAction())) {
-				LatLng latLng = (LatLng) intent.getExtras().get(Constants.INTENT_EXTRA_LOCATION);
+				LatLng latLng = (LatLng) intent.getExtras().get(Constants.INTENT_EXTRA_LATLNG);
+				Location location = (Location) intent.getExtras().get(Constants.INTENT_EXTRA_LOCATION);
 				System.out.println("Adding LatLng " + latLng + " to map");
 				//clearAllMarkers();
-				addMarkerToMap(latLng);
+				//addMarkerToMap(latLng);
+				addLocationToMap(location);
 				
 			} else {
 				System.out.println("Unknown action received " + intent.getAction());
 			}
 		}
+
 	};
 
 	
@@ -276,7 +289,10 @@ public class BasicMapActivity extends FragmentActivity implements OnConnectionFa
 			public void onMapClick(LatLng latLng) {
 				System.out.println("Clicked on map with LatLng : " + latLng);
 				
-				addMarkerToMap(latLng);
+				String title = "Manual location";
+				String snippet = "spotted you here at " + Utils.parseDate(BasicMapActivity.this);
+				
+				addMarkerToMap(latLng,title,snippet);
 				
     			Intent intent = new Intent();
     			intent.setAction(Constants.INTENT_ACTION_MANUAL_LOCATION_UPDATED);
@@ -311,6 +327,9 @@ public class BasicMapActivity extends FragmentActivity implements OnConnectionFa
 				marker.remove();
 			}
 		});
+        
+        googleMap.setMyLocationEnabled(true);
+
     }
     
     
@@ -319,9 +338,7 @@ public class BasicMapActivity extends FragmentActivity implements OnConnectionFa
     	markers.clear();
     	
     }
-	private void addMarkerToMap(LatLng latLng) {
-		String snippet = "Seen you here at " + Utils.parseDate(System.currentTimeMillis(), BasicMapActivity.this);
-		String title = "Manual loc";
+	private void addMarkerToMap(LatLng latLng,String title,String snippet) {
 		Marker marker = googleMap.addMarker(new MarkerOptions().position(latLng)
 															 .title(title)
 															 .snippet(snippet));
@@ -329,6 +346,26 @@ public class BasicMapActivity extends FragmentActivity implements OnConnectionFa
 		markers.add(marker);
 		navigateToPoint(latLng);
 	}
+	
+
+	private void addLocationToMap(Location location) {
+		StringBuffer snippet = new StringBuffer("spotted you here at " + Utils.parseDate(location.getTime(), BasicMapActivity.this));
+		snippet.append("\n");
+		
+		snippet.append("Accuracy : ");
+		snippet.append(location.getAccuracy());
+		snippet.append("\n");
+		snippet.append("Speed : ");
+		snippet.append(location.getSpeed());
+		snippet.append("\n");
+		snippet.append("Provider: ");
+		snippet.append(location.getProvider());
+		snippet.append("\n");
+		
+		String title = "Spotted !";
+		LatLng latLng = Utils.convertLocationToLatLng(location);
+		addMarkerToMap(latLng, title, snippet.toString());
+	}	
 	
     private void changeCamera(CameraUpdate update, CancelableCallback callback) {
        	googleMap.animateCamera(update, callback);
