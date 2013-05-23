@@ -2,12 +2,13 @@ package com.example.simplemapproject;
 
 import java.util.List;
 
+import android.app.IntentService;
+import android.content.Context;
+import android.content.Intent;
+
+import com.example.simplemapproject.utl.Utils;
 import com.google.android.gms.location.ActivityRecognitionResult;
 import com.google.android.gms.location.DetectedActivity;
-
-import android.app.IntentService;
-import android.content.Intent;
-import android.location.Location;
 
 public class MyActivityService extends IntentService {
 
@@ -23,23 +24,26 @@ public class MyActivityService extends IntentService {
 			ActivityRecognitionResult activityRecognitionResult = (ActivityRecognitionResult) intent.getExtras().get("com.google.android.location.internal.EXTRA_ACTIVITY_RESULT");
 			DetectedActivity mostProbableActivity = activityRecognitionResult.getMostProbableActivity();
 			
-			dumpDetectedActivity(mostProbableActivity);
+			dumpDetectedActivity(getApplicationContext(),mostProbableActivity);
 			
 			
 			List<DetectedActivity> probableActivities = activityRecognitionResult.getProbableActivities();
 			
 			if(probableActivities!=null && probableActivities.size()>1) {
-				System.out.println("Found other candidates");
+				Utils.writeToFile(Constants.ACTIVITY_LOCATION, "------------------", getApplicationContext());
 				for (DetectedActivity detectedActivity : probableActivities) {
-					dumpDetectedActivity(detectedActivity);	
+					dumpDetectedActivity(getApplicationContext(),detectedActivity);	
 				}
+				Utils.writeToFile(Constants.ACTIVITY_LOCATION, "------------------", getApplicationContext());
 			}
 			
 		}
 	}
 	
-	private void dumpDetectedActivity(DetectedActivity detectedActivity) {
-		System.out.println(getNameFromType(detectedActivity.getType()) + " - " + detectedActivity);
+	private void dumpDetectedActivity(Context context,DetectedActivity detectedActivity) {
+		String activityDump = Utils.parseDate(context) + "|" + getNameFromType(detectedActivity.getType()) + "|" + detectedActivity;
+		System.out.println(activityDump);
+		Utils.writeToFile(Constants.ACTIVITY_LOCATION, activityDump, context);
 	}
 	
 	 /**

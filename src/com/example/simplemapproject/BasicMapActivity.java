@@ -106,12 +106,9 @@ public class BasicMapActivity extends FragmentActivity implements OnConnectionFa
     		
     		@Override
     		public void onConnected(Bundle bundle) {
-    			System.out.println("onConnected");
-    	    	Intent intent = new Intent(Constants.INTENT_ACTION_LOCATION_UPDATED);
-    	    	PendingIntent pendingIntent = PendingIntent.getService(BasicMapActivity.this, LOCATION_INTENT_CODE, intent, 0);
-    	    	LocationRequest locationRequest = LocationRequest.create().setInterval(5000).setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-    	    	locationClient.requestLocationUpdates(locationRequest, pendingIntent);
+    			startLocationUpdates();
     		}
+
     	},this);
         
         activityRecognitionClient = new ActivityRecognitionClient(this, new  GooglePlayServicesClient.ConnectionCallbacks() {
@@ -126,15 +123,9 @@ public class BasicMapActivity extends FragmentActivity implements OnConnectionFa
     		
     		@Override
     		public void onConnected(Bundle bundle) {
-    			System.out.println("onConnected");
-    			Intent intent = new Intent(BasicMapActivity.this,MyActivityService.class);
-    			intent.setAction(Constants.INTENT_ACTION_RECOGNITION_CHANGE);
-    			PendingIntent pi = PendingIntent.getService(BasicMapActivity.this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-    			activityRecognitionClient.requestActivityUpdates(5000, pi);
-    			
-    			activityPollingInProgress=false;
-    			activityRecognitionClient.disconnect();
+    			startActivityRecognitionUpdates();
     		}
+
     	},this);
 
         
@@ -208,7 +199,9 @@ public class BasicMapActivity extends FragmentActivity implements OnConnectionFa
         
         setUpMapIfNeeded();
         
-        //locationClient.connect();
+        locationClient.connect();
+        activityRecognitionClient.connect();
+        
         //retrieveLocationUsingPendingIntent();
 
 
@@ -416,4 +409,25 @@ public class BasicMapActivity extends FragmentActivity implements OnConnectionFa
 		requestType = START_ACTIVITY_POLLING;
 		
 	}
+	
+	private void startActivityRecognitionUpdates() {
+		System.out.println("onConnected");
+		Intent intent = new Intent(BasicMapActivity.this,MyActivityService.class);
+		intent.setAction(Constants.INTENT_ACTION_RECOGNITION_CHANGE);
+		PendingIntent pi = PendingIntent.getService(BasicMapActivity.this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+		activityRecognitionClient.requestActivityUpdates(5000, pi);
+		
+		activityPollingInProgress=false;
+		activityRecognitionClient.disconnect();
+	}
+	
+	private void startLocationUpdates() {
+		System.out.println("onConnected");
+    	Intent intent = new Intent(Constants.INTENT_ACTION_LOCATION_UPDATED);
+    	PendingIntent pendingIntent = PendingIntent.getService(BasicMapActivity.this, LOCATION_INTENT_CODE, intent, 0);
+    	LocationRequest locationRequest = LocationRequest.create().setInterval(5000).setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+    	locationClient.requestLocationUpdates(locationRequest, pendingIntent);
+	}
+	
+
 }

@@ -25,7 +25,7 @@ public class MyLocationService extends IntentService {
 		if (Constants.INTENT_ACTION_LOCATION_UPDATED.equals(intent.getAction())) {
 			Location location = (Location) intent.getExtras().get(Constants.INTENT_EXTRA_LOCATION);
 			System.out.println("Found location = " + location);
-			Utils.writeSerializedLocationToDisk(location, getApplicationContext());
+			Utils.writeSerializedLocationToDisk(Constants.FILENAME_LOCATION,location, getApplicationContext());
 
 			
 			Intent uiIntent = new Intent();

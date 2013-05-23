@@ -40,9 +40,12 @@ public final class Utils {
 		return sdf.format(resultdate);
 	}
 	
-	public static final void writeToFile(String txt,Context context) {
+	public static final void writeToFile(String fileName, String txt,Context context) {
 		try {
-		    FileOutputStream fos = context.openFileOutput("locations.txt",
+			
+			txt += "\n";
+			
+		    FileOutputStream fos = context.openFileOutput(fileName,
 		            Context.MODE_APPEND | Context.MODE_WORLD_READABLE);
 		    fos.write(txt.toString().getBytes());
 		    fos.close();
@@ -51,7 +54,7 @@ public final class Utils {
 		    
 		    if (storageState.equals(Environment.MEDIA_MOUNTED)) {
 		        File file = new File(context.getExternalFilesDir(null),
-		                "locations3.txt");
+		                fileName);
 		        FileOutputStream fos2 = new FileOutputStream(file,true);
 		        fos2.write(txt.toString().getBytes());
 		        fos2.close();
@@ -61,9 +64,9 @@ public final class Utils {
 		}
 	}		
 	
-	public static final void writeSerializedLocationToDisk(Location location,Context context) {
+	public static final void writeSerializedLocationToDisk(String fileName,Location location,Context context) {
 		String serializedLocation = serializeLocation(location, context);
-		writeToFile(serializedLocation, context);
+		writeToFile(fileName,serializedLocation, context);
 	}
 
 	public static final String serializeLocation(Location location,Context context) {
@@ -90,7 +93,6 @@ public final class Utils {
 		sb.append(location.getTime());
 		sb.append("|");
 		sb.append(location.getProvider());
-		sb.append("\n");
 		return sb.toString();
 	}
 

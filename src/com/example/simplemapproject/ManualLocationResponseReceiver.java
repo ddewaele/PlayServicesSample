@@ -15,7 +15,7 @@ public class ManualLocationResponseReceiver extends BroadcastReceiver {
 		if (Constants.INTENT_ACTION_LOCATION_UPDATED.equals(intent.getAction())) {
 			Location location = (Location) intent.getExtras().get(Constants.INTENT_EXTRA_LOCATION);
 			System.out.println("Found location = " + location);
-			Utils.writeSerializedLocationToDisk(location, context);
+			Utils.writeSerializedLocationToDisk(Constants.FILENAME_LOCATION,location, context);
 		} else {
 			System.out.println("Unknown action found....");
 		}
